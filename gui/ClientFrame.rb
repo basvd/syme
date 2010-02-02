@@ -2,7 +2,7 @@
 
 require "rubygems"
 require "wx"
-require "ChatControl"
+require "gui/ChatControl"
 
 class ClientFrame < Wx::Frame
   
@@ -25,6 +25,9 @@ class ClientFrame < Wx::Frame
     sl_item = conn_menu.append(:item => "Server list")
     
     conn_menu.append_separator()
+    
+    conn_item = conn_menu.append(:item => "Connect")
+    disco_item = conn_menu.append(:item => "Disconnect")
     
     conn_menu.append()
     

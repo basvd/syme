@@ -2,7 +2,7 @@
 
 require "rubygems"
 require "wx"
-require "ClientFrame"
+require "gui/ClientFrame"
 
 SYME_NAME = "Syme IRC client"
 SYME_VERSION = "0.1dev"
