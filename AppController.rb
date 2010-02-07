@@ -1,7 +1,9 @@
 require "singleton"
 require "ActorQueue"
+require "ConnectionController"
 require "eventmachine"
-require "lib/SymeLib"
+require "wx"
+require "gui/ClientFrame"
 
 class AppController
   include Singleton # use AppController.instance
@@ -25,7 +27,7 @@ class AppController
     end
     
     # Run other thread and process actors (frontend)
-    Wx::Timer.every(55) do
+    Wx::Timer.every(25) do
       Thread.pass
       @frontend_queue.process
     end
@@ -33,21 +35,22 @@ class AppController
     # Test
     nick = "syme-irc"
     server = "irc.freenode.net"
-    port = 6667
     connect_dialog = Wx::TextEntryDialog.new(nil,
-                                             :message => "Enter a connection string (nick@server:port) for Syme to connect to:",
+                                             :message => "Enter a connection string (nick@server) for Syme to connect to:",
                                              :caption => "Connection test",
-                                             :default_value => "#{nick}@#{server}:#{port}")
+                                             :default_value => "#{nick}@#{server}")
     if(Wx::ID_OK == connect_dialog.show_modal())
-      if(connect_dialog.get_value() =~ /([^@]+)@([^:]+):(\d+)/)
-        nick, server, port = $1, $2, $3.to_i
+      if(connect_dialog.get_value() =~ /([^@]+)@([^:]+)/)
+        nick, server= $1, $2
       end
       @network_queue.invoke_later do
         puts("Connecting...")
-        EventMachine.connect server, port, SymeLib::Irc, nick
+        ConnectionController.new(nick, server)
       end
     end
     connect_dialog.destroy()
+    
+    ClientFrame.new.show
   end
   
 end
