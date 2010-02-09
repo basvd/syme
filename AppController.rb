@@ -44,7 +44,6 @@ class AppController
         nick, server= $1, $2
       end
       @network_queue.invoke_later do
-        puts("Connecting...")
         ConnectionController.new(nick, server)
       end
     end
