@@ -20,20 +20,28 @@ module SymeLib
   SYM_REPLIES = NUM_REPLIES.invert()
   
   class IrcEvent
-    attr_reader :command, :source, :src_nick, :target, :tgt_nick, :channel, :content
+    attr_reader :command, :source, :target, :channel, :content, :ctcp
     
-    def initialize(source, command, args)
-      @command = command
-      @source = source
+    def initialize(msg)
+      @command = msg.command
+      @source = msg.source
       
-      @target = args[:target]
-      @content = args[:content]
+      type, @target = msg.target
+      case type
+      when :channel
+        @channel = @target
+      when :nick
+        @nick = @target
+      end
       
-      # Extract nickname
-      #@source[:nick], @source[:user] = @source.split("!", 2) unless @source.index("!").nil?
-      #@target[:nick], @source[:nick] = @target.split("!", 2) unless @target.index("!").nil?
+      @params = msg.params
+      if(@target)
+        @content = @params[1..-1].join(" ")
+      else
+        @content = @params.join(" ")
+      end
       
-      @channel = args[:channel]
+      @ctcp = msg.ctcp
     end
   end
   
@@ -41,7 +49,7 @@ module SymeLib
     include EventMachine::Protocols::LineText2
     
     attr_accessor :version
-    attr_reader :ping_timer, :lag, :host
+    attr_reader :ping_timer, :lag, :host, :supports
     
     def initialize(nick, args = {})
       super()
@@ -54,18 +62,20 @@ module SymeLib
       
       set_delimiter("\r\n") # IRC message delimiter
       
-      @pass = args[:pass]
       @nick = nick
+      @pass = args[:pass]
+      @version = args[:version] || VERSION
+      
       @callbacks = {}
       @ping_time = 0
-      @version = args[:version] || VERSION
+      
       
       # Internal events
       
       on :ctcp do |event|
         # TODO: Better CTCP
-        @log.debug("CTCP #{event.content}")
-        if(event.content == "VERSION")
+        @log.info("Received CTCP #{event.content}")
+        if(event.ctcp == "VERSION")
           reply_ctcp(event.source[/^[^!]+/], "VERSION #{@version}")
         end
       end
@@ -113,65 +123,29 @@ module SymeLib
     def receive_line(line)
       @log.debug("<< #{line}")
       
-      if(line =~ /^:([^\s]+) ([A-Z]+|\d{3}) (.*)$/)
-        
-        source = $1
-        command = $2
-        #target = $3
-        content = $3
-        
-        if command.to_i == 0
-          # Convert non-numeric command to symbol
-          event = command.downcase.intern
-        else
-          # Translate numeric reply
-          event = SYM_REPLIES[command] if SYM_REPLIES.has_key?(command)
-        end
-        
-        # TODO: Parse `content` if necessary (especially `target`)
-        case command
-        
-        when "PRIVMSG"
-          if(content =~ /\001(.*)\001/)
-            event = :ctcp
-            content = ctcp_unquote($1)
-          end
-        
-        end
-        
-        data = IrcEvent.new(source, command,
-                            #:target => target,
-                            :content => content)
-        trigger(event, data)
+      msg = MessageParser.new(line)
+      evt_data = IrcEvent.new(msg)
+      
+      # Find the appropriate event
+      if msg.command.to_i == 0
+        # Convert non-numeric command to symbol
+        evt = msg.command.downcase.intern
+      else
+        # Translate numeric reply
+        evt = SYM_REPLIES[msg.command] if SYM_REPLIES.has_key?(msg.command)
       end
+      
+      if(evt == :privmsg && msg.is_ctcp?)
+        evt = :ctcp
+      end
+      
+      trigger(evt, evt_data)
     end
     
     # Called on disconnect or connection failure
     def unbind
       @log.info("Disconnected!")
       EventMachine::stop_event_loop
-    end
-    
-    def ctcp_quote(msg)
-      # Encode CTCP
-      return msg.gsub(/(\020|\n|\r|\000)/) do |c|
-        return "\020#{c}"
-      end
-    end
-    
-    def ctcp_unquote(msg)
-      # Decode CTCP
-      return msg.gsub(/\020(\020|n|r|0)/) do |c|
-        case(c)
-        when "n"
-          return "\n"
-        when "r"
-          return "\r"
-        when "0"
-          return "\000"
-        end
-        return "\020"
-      end
     end
     
     # Raw IRC message
@@ -182,12 +156,12 @@ module SymeLib
     
     # Basic CTCP send
     def send_ctcp(target, msg)
-      send_privmsg(target, "\001#{ctcp_quote(msg)}\001")
+      send_privmsg(target, "\001#{MessageParser.ctcp_quote(msg)}\001")
     end
     
     # Basic CTCP reply
     def reply_ctcp(target, msg)
-      send_notice(target, "\001#{ctcp_quote(msg)}\001")
+      send_notice(target, "\001#{MessageParser.ctcp_quote(msg)}\001")
     end
     
     def send_notice(target, msg)
@@ -214,13 +188,104 @@ module SymeLib
     private
     def trigger(event, data = nil)
       # If necessary, translate numeric or string event to symbol
-      event = SYM_REPLIES[event] if SYM_REPLIES.has_key?(event)
-      event = event.intern if event.respond_to?(:intern)
+      #event = SYM_REPLIES[event] if SYM_REPLIES.has_key?(event)
+      #event = event.intern if event.respond_to?(:intern)
       
       @callbacks[event] = [] unless @callbacks[event].respond_to?(:each)
       
       @callbacks[event].each do |action|
         action.call(data)
+      end
+    end
+  end
+  
+  class MessageParser
+    attr_reader :raw, :source, :command, :params, :target, :ctcp
+    
+    def initialize(raw)
+      @raw = raw
+      
+      # Incoming reply
+      if(@raw =~ /^:([^\s]+) ([A-Z]+|\d{3}) (.*)$/)
+        @source = $1
+        @command = $2
+        params = $3
+        
+      # Outgoing command
+      elsif(@raw =~ /^([A-Z]+) (.*)$/)
+        @source = nil # Actually client is source
+        @command = $1
+        params = $2
+        
+      else
+        # TODO: fail...
+        return
+      end
+      
+      # Split parameters (<param> {SPACE <param>} [ SPACE : <trailing>])
+      params = params.split(" :", 2)
+      params[0] = params[0].split(/ +/)
+      @params = params.flatten()
+      
+      # [:channel/:nick, name]
+      @target = parse_target() if has_target?
+      
+      @ctcp = parse_ctcp() if is_ctcp?
+    end
+    
+    # Contains a target parameter?
+    def has_target?
+      case @command
+      when /\d{3}/, "PRIVMSG", "NOTICE"
+        return true
+      else
+        return false
+      end
+    end
+    
+    def is_ctcp?
+      return true if @params.last =~ /\001(.*)\001/
+      return false
+    end
+    
+    private
+    # Parses the first parameter as target
+    def parse_target
+      name = @params[0] # Target is always first parameter (if present)
+      if(name =~ /^[\#+&]/)
+        return :channel, name
+      else
+        return :nick, name[/^[^!]+/] # Only return nickname part
+      end
+    end
+    
+    def parse_ctcp
+      m = @params.last.match(/\001(.*)\001/)
+      return MessageParser.ctcp_unquote(m[1]) unless m.nil?
+    end
+    
+    public
+    ## Utility methods
+    # CTCP
+    def self.ctcp_quote(msg)
+      # Encode CTCP
+      return msg.gsub(/(\020|\n|\r|\000)/) do |c|
+        return "\020#{c}"
+      end
+    end
+    
+    def self.ctcp_unquote(msg)
+      # Decode CTCP
+      return msg.gsub(/\020(\020|n|r|0)/) do |c|
+        case(c)
+        when "n"
+          return "\n"
+        when "r"
+          return "\r"
+        when "0"
+          return "\000"
+        end
+        return "\020"
       end
     end
   end
