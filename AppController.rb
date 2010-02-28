@@ -4,16 +4,18 @@ require "ConnectionController"
 require "eventmachine"
 require "wx"
 require "gui/ClientFrame"
+require "models/irc/User"
 
 class AppController
   include Singleton # use AppController.instance
-  
-  attr_reader :network_queue, :frontend_queue
-  
+
+  attr_reader :network_queue, :frontend_queue, :frame
+
   def initialize
+    @frame = ClientFrame.new
     @network_queue = ActorQueue.new
     @frontend_queue = ActorQueue.new
-    
+
     # EventMachine thread (network)
     Thread.new do
       EventMachine::run do
@@ -25,13 +27,13 @@ class AppController
         on_tick.call
       end
     end
-    
+
     # Run other thread and process actors (frontend)
     Wx::Timer.every(25) do
       Thread.pass
       @frontend_queue.process
     end
-    
+
     # Test
     nick = "syme-irc"
     server = "irc.freenode.net"
@@ -44,12 +46,11 @@ class AppController
         nick, server= $1, $2
       end
       @network_queue.invoke_later do
-        ConnectionController.new(nick, server)
+        ConnectionController.new(User.new(nick), server)
       end
     end
     connect_dialog.destroy()
-    
-    ClientFrame.new.show
+
+    @frame.show()
   end
-  
 end
