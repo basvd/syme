@@ -23,6 +23,6 @@ class Channel < Chat
     @users += usr
 
     changed()
-    notify_observers(self, { :join => usr })
+    notify_observers(self, { :add_user => usr })
   end
 end

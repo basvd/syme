@@ -78,7 +78,6 @@ class ClientFrame < Wx::Frame
   end
 
   def on_chat_change(event)
-    # TODO: Do not use multiple chatwindows, pass chat to existing one instead and let it deal with it.
     new_chat = @window_list.get_item_data(event.get_item())
 
     @chat_window.current_chat = new_chat

@@ -1,6 +1,9 @@
 require "eventmachine"
 require "logger"
 
+# TODO: (list)
+# * Output buffering to avoid flooding
+# * Hashes as a robust alternative to events
 module SymeLib
   # Default CTCP VERSION reply
   VERSION = "SymeLib 0.1"

@@ -51,20 +51,20 @@ class ChatControl < Wx::StyledTextCtrl
   end
 
   def write_message(m)
-      pos = get_length()
-      time_range = [pos + 2, 5]
-      text = "\n" + m.time.strftime("[%H:%M] ")
-      text += "<" unless m.source_nick.nil?
-      nick_range = [pos + text.length, m.source_nick.nil? ? 1 : m.source_nick.length]
-      text += m.source_nick.nil? ? "#" : "#{m.source_nick}>"
-      text += text.length > 20 ? "\t" : "\t\t"
-      content_range = [pos + text.length, m.content.length]
-      text += m.content
-      append_text(text)
+    pos = get_length()
+    time_range = [pos + 2, 5]
+    text = "\n" + m.time.strftime("[%H:%M] ")
+    text += "<" unless m.source_nick.nil?
+    nick_range = [pos + text.length, m.source_nick.nil? ? 1 : m.source_nick.length]
+    text += m.source_nick.nil? ? "#" : "#{m.source_nick}>"
+    text += text.length > 20 ? "\t" : "\t\t"
+    content_range = [pos + text.length, m.content.length]
+    text += m.content
+    append_text(text)
 
-      style(:time, time_range)
-      style(:nick, nick_range, m.source)
-      style(:content, content_range)
+    style(:time, time_range)
+    style(:nick, nick_range, m.source)
+    style(:content, content_range)
   end
 
   def style(s, range, content = nil)

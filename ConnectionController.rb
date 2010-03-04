@@ -1,5 +1,7 @@
+require "eventmachine"
+
 require "AppController"
-require "lib/SymeLib"
+require "lib/syme/SymeLib"
 require "models/irc/Channel"
 require "models/irc/Connection"
 require "models/irc/Message"
@@ -49,13 +51,24 @@ class ConnectionController
           chat = Channel.new(event.channel)
           @model.add_channel(chat)
 
-          #@app.frame.add_chat(@model.channels[event.channel], server)
-
           log.info("Joined #{event.channel}")
         end
       else
+        frontend.invoke_later do
+          chat = @model.channels[event.channel]
+          unless chat.nil?
+            u = User.new(event.source_nick, event.source_user)
+            chat.add_user(u)
+          end
 
+          log.info("#{u.nick} joined #{event.channel}")
+        end
       end
+    end
+
+    # Users
+    @conn.on :names_reply do |event|
+
     end
 
     # Nick change
