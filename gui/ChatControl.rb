@@ -6,10 +6,6 @@ class ChatControl < Wx::StyledTextCtrl
   STYLES = { :time => 1, :nick => 2, :content => 3 }
 
   def initialize(parent, id = -1)
-    #super(parent, id, "",
-    #      Wx::DEFAULT_POSITION, Wx::DEFAULT_SIZE,
-    #      Wx::TE_READONLY | Wx::TE_MULTILINE | Wx::TE_RICH | Wx::TE_RICH2
-    #)
     super(parent, :style => Wx::SIMPLE_BORDER)
     self.use_horizontal_scroll_bar = true
 
@@ -18,11 +14,10 @@ class ChatControl < Wx::StyledTextCtrl
     self.wrap_start_indent = 24 # An estimate
     set_margin_width(1, 0)
     set_margins(5, 5)
+    set_caret_width(0)
 
-    #Test
-    #append_text("[04:22] <Sk-Marten>\terg lang bericht erg lang berichterg lang berichterg lang berichterg lang berichterg lang berichterg lang bericht")
-    #append_text("\n[04:22] <basvd>\t\terg lang bericht erg lang berichterg lang berichterg lang berichterg lang berichterg lang berichterg lang bericht")
-    #append_text("\n[04:22] <CountryBoy>\terg lang bericht erg lang berichterg lang berichterg lang berichterg lang berichterg lang berichterg lang bericht")
+    evt_size :on_size
+
     self.read_only = true
 
     @nick_styles = Hash.new do |hash, key|
@@ -34,15 +29,25 @@ class ChatControl < Wx::StyledTextCtrl
     end
   end
 
-  def update(subject, change = {})
-    return if change[:messages].nil?
+  def on_size(event)
+    @los = lines_on_screen() if @los.nil?
+    event.skip()
+    line_scroll(0, @los - lines_on_screen())
+    @los = lines_on_screen()
+  end
 
-    self.read_only = false # Temporarily disable
-    change[:messages].each do |msg|
-      write_message(msg)
-      line_scroll(0, wrap_count(get_line_count()) + 1)
+  def update(subject = nil, change = {})
+    # WxRuby update instead of Observer update...
+    return if change[:messages].nil? && subject.nil?
+
+    unless change[:messages].nil?
+      self.read_only = false # Temporarily disable
+      change[:messages].each do |msg|
+        write_message(msg)
+        line_scroll(0, wrap_count(get_line_count()) + 1)
+      end
+      self.read_only = true
     end
-    self.read_only = true
   end
 
   def write_message(m)
@@ -52,7 +57,7 @@ class ChatControl < Wx::StyledTextCtrl
       text += "<" unless m.source_nick.nil?
       nick_range = [pos + text.length, m.source_nick.nil? ? 1 : m.source_nick.length]
       text += m.source_nick.nil? ? "#" : "#{m.source_nick}>"
-      text += text.length > 16 ? "\t" : "\t\t"
+      text += text.length > 20 ? "\t" : "\t\t"
       content_range = [pos + text.length, m.content.length]
       text += m.content
       append_text(text)

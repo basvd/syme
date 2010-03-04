@@ -84,7 +84,10 @@ class ClientFrame < Wx::Frame
     @chat_window.current_chat = new_chat
   end
 
-  def update(subject, change = {})
+  def update(subject = nil, change = {})
+    # WxRuby update instead of Observer update...
+    return if change[:messages].nil? && subject == nil
+
     if subject.is_a? ConnectionList
       conn = change[:add_connection]
       unless conn.nil?
