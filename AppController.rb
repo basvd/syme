@@ -1,20 +1,27 @@
+require "eventmachine"
 require "singleton"
+require "wx"
+
 require "ActorQueue"
 require "ConnectionController"
-require "eventmachine"
-require "wx"
 require "gui/ClientFrame"
+require "models/ConnectionList"
 require "models/irc/User"
 
 class AppController
   include Singleton # use AppController.instance
 
-  attr_reader :network_queue, :frontend_queue, :frame
+  attr_reader :conn_list, :frame, :frontend_queue, :network_queue
 
   def initialize
+    @conn_list = ConnectionList.new
+
     @frame = ClientFrame.new
-    @network_queue = ActorQueue.new
     @frontend_queue = ActorQueue.new
+    @network_queue = ActorQueue.new
+
+    # GUI observes connections
+    @conn_list.add_observer(@frame)
 
     # EventMachine thread (network)
     Thread.new do

@@ -19,11 +19,11 @@ class ConnectionController
     log.level = Logger::DEBUG
     log.info("Connecting...")
 
-    frontend.invoke_later do
-      @app.frame.add_chat(Channel.new(server))
-    end
-
     @model = Connection.new(server, user)
+
+    frontend.invoke_later do
+      @app.conn_list.add_connection(@model)
+    end
 
     @conn = EventMachine::connect(server, port, SymeLib::Irc,
                                   user.nick,
@@ -33,7 +33,7 @@ class ConnectionController
                                   :version => "Syme IRC 0.1dev")
 
     # All errors
-    @conn.on ERROR_CODES do |e|
+    @conn.on ERROR_CODES do |event|
       # TODO: Output error message
     end
 
@@ -46,11 +46,10 @@ class ConnectionController
     @conn.on :join do |event|
       if(event.source_nick == user.nick)
         frontend.invoke_later do
-          @model.channels[event.channel]
-          @app.frame.add_chat(@model.channels[event.channel], server)
+          chat = Channel.new(event.channel)
+          @model.add_channel(chat)
 
-          @model.channels[event.channel].add_observer(@app.frame.root_panel.chan_topic)
-          @model.channels[event.channel].add_observer(@app.frame.root_panel.chat_box)
+          #@app.frame.add_chat(@model.channels[event.channel], server)
 
           log.info("Joined #{event.channel}")
         end

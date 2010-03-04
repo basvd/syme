@@ -1,7 +1,6 @@
 require "wx"
 require "models/irc/Message.rb"
 
-# TODO: Implement a custom control using scrollbar and canvas of some sort
 class ChatControl < Wx::StyledTextCtrl
 
   STYLES = { :time => 1, :nick => 2, :content => 3 }
@@ -35,7 +34,7 @@ class ChatControl < Wx::StyledTextCtrl
     end
   end
 
-  def update(change = {})
+  def update(subject, change = {})
     return if change[:messages].nil?
 
     self.read_only = false # Temporarily disable

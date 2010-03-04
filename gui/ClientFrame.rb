@@ -4,7 +4,7 @@ require "gui/ChatWindow"
 
 class ClientFrame < Wx::Frame
 
-  attr_reader :root_panel, :window_list
+  attr_reader :chat_window, :window_list
 
   def initialize(size = nil)
     super(
@@ -40,8 +40,9 @@ class ClientFrame < Wx::Frame
     self.menu_bar = @menu_bar
 
     @split_window = Wx::SplitterWindow.new(self, :style => Wx::SP_LIVE_UPDATE)
-    @root_panel = ChatWindow.new(@split_window)
     @left_panel = Wx::Panel.new(@split_window)
+
+    @chat_window = ChatWindow.new(@split_window)
 
     # Left panel content
     text_margin = 3 # margin for sidepanel labels
@@ -49,7 +50,7 @@ class ClientFrame < Wx::Frame
     window_text = Wx::StaticText.new(@left_panel,
                                      :label => "Conversations",
                                      :style => Wx::ALIGN_CENTER,
-                                     :size => [-1, @root_panel.chan_topic.best_size.height - text_margin])
+                                     :size => [-1, @chat_window.topic_text.best_size.height - text_margin])
 
     # Left panel layout
     left_size = Wx::BoxSizer.new(Wx::VERTICAL)
@@ -62,10 +63,13 @@ class ClientFrame < Wx::Frame
     # Split windows
     #@split_window.sash_gravity = 1.0
     @split_window.set_minimum_pane_size([150, @left_panel.get_best_size().width].max)
-    @split_window.split_vertically(@left_panel, @root_panel, 150)
+    @split_window.split_vertically(@left_panel, @chat_window, 150)
 
     @split_window.fit()
     @split_window.min_size = @split_window.best_size
+
+    # Events
+    evt_tree_sel_changed(@window_list, :on_chat_change)
 
     # Fit the frame
     fit()
@@ -73,15 +77,42 @@ class ClientFrame < Wx::Frame
     #maximize(true)
   end
 
-  def add_chat(chan, parent = nil)
-    if(parent.nil?)
-      @window_list.add_root(chan.name)
-    else
-      p_id = nil
-      @window_list.each do |id|
-        p_id = id if parent == @window_list.get_item_text(id)
+  def on_chat_change(event)
+    # TODO: Do not use multiple chatwindows, pass chat to existing one instead and let it deal with it.
+    new_chat = @window_list.get_item_data(event.get_item())
+
+    @chat_window.current_chat = new_chat
+  end
+
+  def update(subject, change = {})
+    if subject.is_a? ConnectionList
+      conn = change[:add_connection]
+      unless conn.nil?
+        add_chat(conn.chat)
+        conn.add_observer(self)
       end
-      @window_list.ensure_visible(@window_list.append_item(p_id, chan.name)) unless p_id.nil?
+    elsif subject.is_a? Connection
+      add_chat(change[:add_channel], subject.chat) unless change[:add_channel].nil?
+      add_chat(change[:add_private], subject.chat) unless change[:add_private].nil?
     end
+  end
+
+  private
+  def add_chat(chat, parent = nil)
+    @chat_window.add_chat(chat)
+
+    # Adding a subchat?
+    if parent.nil?
+      list_id = @window_list.add_root(chat.name)
+      @window_list.set_item_has_children(list_id, true)
+    else
+      p_id = 0
+      @window_list.each do |id|
+        p_id = id if parent == @window_list.get_item_data(id)
+      end
+      list_id = @window_list.append_item(p_id, chat.name)
+    end
+    @window_list.ensure_visible(list_id)
+    @window_list.set_item_data(list_id, chat)
   end
 end

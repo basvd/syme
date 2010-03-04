@@ -4,30 +4,51 @@ class Connection
 
   include Observable
 
-  attr_reader :channels, :privates, :users
+  attr_reader :channels, :chat, :privates, :users
 
   def initialize(sv_name, id)
     super()
     @server_name = sv_name
     @identity = id
 
-    @channels = Hash.new do |hash, key|
-      hash[key] = Channel.new(key)
+    # Chat for connection messages
+    @chat = Chat.new(@server_name)
 
-      changed()
-      notify_observers(:channels)
-    end
+    # Active chats
+    @channels = {}
+    @privates = {}
 
-    @privates = Hash.new #do |hash, key|
-    #  hash[key] = PrivateChat.new(key)
-
-    #  changed()
-    #  notify_observers(:privates)
-    #end
-
+    # User lookup table
     @users = Hash.new do |hash, key|
       hash[key] = User.new(nil, key)
     end
+  end
+
+  def add_channel(chat)
+    @channels[chat.name] = chat
+
+    changed()
+    notify_observers(self, { :add_channel => chat })
+  end
+
+  def add_private(chat)
+    @privates[chat.name] = chat
+
+    changed()
+    notify_observers(self, { :add_private => chat })
+  end
+
+  def delete_channel(c)
+    c = @channels.delete(c)
+
+    unless c.nil?
+      changed()
+      notify_observers(self, { :delete_channel => c })
+    end
+  end
+
+  def delete_private(chat)
+    # TODO
   end
 
   def add_user(usr, chan = nil)
