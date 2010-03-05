@@ -22,27 +22,14 @@ module SymeLib
 
   SYM_REPLIES = NUM_REPLIES.invert()
 
+  # Dynamic event class
   class IrcEvent
-    attr_reader :channel, :command, :content, :ctcp, :params, :source, :source_nick, :source_user, :target
-
-    def initialize(msg)
-      @command = msg.command
-      @source = msg.source
-      @params = msg.params
-      user = @source.split("!", 2)
-      @source_nick, @source_user = user unless user.length != 2
-
-      type, @target = msg.target
-      case type
-      when :channel
-        @channel = @target
-      when :nick
-        @nick = @target
+    def initialize(data)
+      data.each do |k,v|
+        k = k.to_s
+        instance_variable_set("@#{k}", v)
+        self.class.send(:define_method, k, proc { instance_variable_get("@#{k}") })
       end
-
-      @content = msg.content
-
-      @ctcp = msg.ctcp
     end
   end
 
@@ -132,23 +119,10 @@ module SymeLib
       @log.debug("<< #{line}")
 
       msg = MessageParser.new(line)
-      evt_data = IrcEvent.new(msg)
-      trigger(:raw, evt_data)
+      event = msg.to_event()
 
-      # Find the appropriate event
-      if msg.command.to_i == 0
-        # Convert non-numeric command to symbol
-        evt = msg.command.downcase.intern
-      else
-        # Translate numeric reply
-        evt = SYM_REPLIES[msg.command] if SYM_REPLIES.has_key?(msg.command)
-      end
-
-      if(evt == :privmsg && msg.is_ctcp?)
-        evt = :ctcp
-      end
-
-      trigger(evt, evt_data)
+      trigger(:incoming, event)
+      trigger(event.type, event)
     end
 
     # Called on disconnect or connection failure
@@ -251,11 +225,37 @@ module SymeLib
 
       @content = @params.last if has_trailing?
 
-      #if(@target)
-      #  @content = @params[1..-1].join(" ") # Skip first, includes last
-      #else
-      #  @content = @params.join(" ")
-      #end
+      # Find the appropriate event type
+      if @command.to_i == 0
+        # Convert non-numeric command to symbol
+        @type = @command.downcase.intern
+      else
+        # Translate numeric reply
+        @type = SYM_REPLIES[@command] if SYM_REPLIES.has_key?(@command)
+      end
+
+      @type = :ctcp if @type == :privmsg && is_ctcp?
+    end
+
+    def to_event()
+      data = {
+        :raw => @raw,
+        :command => @command,
+        :source => @source,
+        :type => @type
+      }
+
+      user = @source.split("!", 2)
+      data[:source_nick], data[:source_user] = user unless user.length != 2
+
+      data[:content] = @params.last if has_trailing?
+      data[:params] = @params unless @params.nil? || @params.empty?
+      data[:ctcp] = @ctcp unless @ctcp.nil?
+
+      # data[target_type, target]
+      data[@target[0]] = @target[1] unless target.nil?
+
+      return IrcEvent.new(data)
     end
 
     # Contains a trailing parameter?
