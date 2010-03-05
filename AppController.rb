@@ -10,9 +10,13 @@ require "models/irc/User"
 class AppController
   include Singleton # use AppController.instance
 
-  attr_reader :conn_list, :frame, :frontend_queue, :network_queue
+  attr_reader :conn_list, :frame, :frontend_queue, :logger, :network_queue
 
   def initialize
+    # Prepare logger for connection
+    @logger = Logger.new(STDOUT)
+    @logger.level = Logger::INFO
+
     @conn_list = ConnectionList.new
 
     @frame = ClientFrame.new
@@ -40,14 +44,16 @@ class AppController
       @frontend_queue.process
     end
 
+    @frame.show()
+
     # Test
     nick = "syme-irc"
     server = "irc.freenode.net"
-    connect_dialog = Wx::TextEntryDialog.new(nil,
+    connect_dialog = Wx::TextEntryDialog.new(@frame,
                                              :message => "Enter a connection string (nick@server) for Syme to connect to:",
                                              :caption => "Connection test",
                                              :default_value => "#{nick}@#{server}")
-    if(Wx::ID_OK == connect_dialog.show_modal())
+    if Wx::ID_OK == connect_dialog.show_modal()
       if(connect_dialog.get_value() =~ /([^@]+)@([^:]+)/)
         nick, server= $1, $2
       end
@@ -56,7 +62,5 @@ class AppController
       end
     end
     connect_dialog.destroy()
-
-    @frame.show()
   end
 end

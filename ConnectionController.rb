@@ -16,10 +16,7 @@ class ConnectionController
     @app = AppController.instance
     frontend = @app.frontend_queue
 
-    # Prepare logger for connection
-    log = Logger.new(STDOUT)
-    log.level = Logger::DEBUG
-    log.info("Connecting...")
+    @logger = @app.logger
 
     @model = Connection.new(server, user)
 
@@ -27,11 +24,12 @@ class ConnectionController
       @app.conn_list.add_connection(@model)
     end
 
+    @logger.info("Connecting...")
     @conn = EventMachine::connect(server, port, SymeLib::Irc,
                                   user.nick,
                                   #:channels => ["#groept", "##groept"],
                                   :channels => "##groept",
-                                  :logger => log,
+                                  :logger => @logger,
                                   :version => "Syme IRC 0.1dev")
 
     # All errors
@@ -51,7 +49,7 @@ class ConnectionController
           chat = Channel.new(event.channel)
           @model.add_channel(chat)
 
-          log.info("Joined #{event.channel}")
+          @logger.info("Joined #{event.channel}")
         end
       else
         frontend.invoke_later do
@@ -61,7 +59,7 @@ class ConnectionController
             chat.add_user(u)
           end
 
-          log.info("#{u.nick} joined #{event.channel}")
+          @logger.info("#{u.nick} joined #{event.channel}")
         end
       end
     end

@@ -1,6 +1,7 @@
 require "wx"
 require "gui/ChatControl"
 require "gui/ChatWindow"
+require "gui/dialogs/AboutDialog"
 
 class ClientFrame < Wx::Frame
 
@@ -20,24 +21,31 @@ class ClientFrame < Wx::Frame
 
     # Menu - Connection
     conn_menu = Wx::Menu.new()
-    sl_item = conn_menu.append(:item => "Server list")
+    sl_item = conn_menu.append(-1, "Server list")
 
     conn_menu.append_separator()
 
-    conn_item = conn_menu.append(:item => "Connect")
-    disco_item = conn_menu.append(:item => "Disconnect")
-
-    conn_menu.append()
+    conn_item = conn_menu.append(-1, "Connect")
+    disco_item = conn_menu.append(-1, "Disconnect")
 
     # Menu - Channel
     chan_menu = Wx::Menu.new()
+
+    # Menu - Help
+    help_menu = Wx::Menu.new()
+    about_item = help_menu.append(Wx::ID_ABOUT, "About")
+
+    evt_menu about_item do |event|
+      AboutDialog.new(self).show()
+    end
 
     # Menu bar
     @menu_bar = Wx::MenuBar.new()
     @menu_bar.append(conn_menu, "Connection")
     @menu_bar.append(chan_menu, "Channel")
+    @menu_bar.append(help_menu, "Help")
 
-    self.menu_bar = @menu_bar
+    set_menu_bar(@menu_bar)
 
     @split_window = Wx::SplitterWindow.new(self, :style => Wx::SP_LIVE_UPDATE)
     @left_panel = Wx::Panel.new(@split_window)
@@ -72,8 +80,9 @@ class ClientFrame < Wx::Frame
     evt_tree_sel_changed(@window_list, :on_chat_change)
 
     # Fit the frame
+
+    set_min_size([600, 500])
     fit()
-    set_min_size(get_best_size())
     #maximize(true)
   end
 
@@ -114,7 +123,9 @@ class ClientFrame < Wx::Frame
       end
       list_id = @window_list.append_item(p_id, chat.name)
     end
-    @window_list.ensure_visible(list_id)
     @window_list.set_item_data(list_id, chat)
+
+    @window_list.ensure_visible(list_id)
+    @window_list.select_item(list_id)
   end
 end

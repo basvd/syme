@@ -1,5 +1,6 @@
 require "wx"
 require "gui/ChatControl"
+require "gui/LogoPanel"
 
 class ChatWindow < Wx::SplitterWindow
 
@@ -22,7 +23,7 @@ class ChatWindow < Wx::SplitterWindow
     #expand_topic = Wx::BitmapButton.new(@root_panel, :bitmap => Wx::Bitmap.new("icons/control_270_small.png", Wx::BITMAP_TYPE_PNG))
 
     @chat_controls = {}
-    @chat_box = Wx::Panel.new(@root_panel)#ChatControl.new(@root_panel)
+    @chat_box = LogoPanel.new(@root_panel, false)
 
     @nick_select = Wx::Choice.new(@root_panel)
     @nick_select.append("nick1")
@@ -32,6 +33,10 @@ class ChatWindow < Wx::SplitterWindow
     @nick_select.selection = 0
 
     @message_box = Wx::TextCtrl.new(@root_panel, :style => Wx::TE_PROCESS_ENTER | Wx::TE_PROCESS_TAB)
+
+    @topic_text.show(false)
+    @nick_select.show(false)
+    @message_box.show(false)
 
     # Chat window layout sizer
     @root_siz = Wx::BoxSizer.new(Wx::VERTICAL)
@@ -79,7 +84,8 @@ class ChatWindow < Wx::SplitterWindow
 
     # Update topic_text + observer
     @current_chat.delete_observer(@topic_text) unless @current_chat.nil?
-    @topic_text.value = (chat.respond_to? :topic) ? chat.topic : ""
+    topic = chat.topic if chat.respond_to? :topic
+    @topic_text.value = chat.topic unless topic.nil?
     chat.add_observer(@topic_text)
 
     # Update users_list + observer
@@ -92,6 +98,13 @@ class ChatWindow < Wx::SplitterWindow
     end
 
     # Replace chat_window (keep observer)
+
+    if @chat_box.is_a? LogoPanel
+      @topic_text.show()
+      @nick_select.show()
+      @message_box.show()
+    end
+
     ctrl = @chat_controls[chat]
     @root_siz.replace(@chat_box, ctrl)
     @chat_box.show(false)
