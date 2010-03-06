@@ -2,8 +2,8 @@ class LogoPanel < Wx::Panel
 
   attr_accessor :logo
 
-  def initialize(parent, use_text = false)
-    super(parent)
+  def initialize(parent, use_text = false, *args)
+    super(parent, *args)
 
     if use_text
       @text = Wx::StaticText.new(self, :label => "Syme IRC client")
