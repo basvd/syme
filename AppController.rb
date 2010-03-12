@@ -1,3 +1,4 @@
+require "logger"
 require "singleton"
 require "wx"
 
@@ -14,7 +15,7 @@ class AppController
 
   def initialize
     # Prepare logger for connection
-    @logger = Logger.new(STDOUT)
+    @logger = Logger.new("app.log")
     @logger.level = Logger::INFO
 
     @conn_list = ConnectionList.new

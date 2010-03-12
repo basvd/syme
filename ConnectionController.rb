@@ -1,4 +1,4 @@
-require "eventmachine"
+#require "eventmachine"
 
 require "AppController"
 require "lib/syme/SymeLib"

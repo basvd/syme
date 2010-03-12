@@ -1,11 +1,12 @@
+require "thread"
 
 class ActorQueue
-  
+
   def initialize
     @queue = []
     @mutex = Mutex.new
   end
-  
+
   def process
     @mutex.synchronize do
       while(!@queue.empty?)
@@ -14,7 +15,7 @@ class ActorQueue
       end
     end
   end
-  
+
   def invoke_later(&actor)
     @mutex.synchronize do
       @queue.push(actor)

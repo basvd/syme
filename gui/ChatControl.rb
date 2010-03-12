@@ -1,5 +1,5 @@
 require "wx"
-require "models/irc/Message.rb"
+require "models/irc/Message"
 
 class ChatControl < Wx::StyledTextCtrl
 

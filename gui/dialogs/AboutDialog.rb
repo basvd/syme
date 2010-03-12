@@ -19,7 +19,7 @@ class AboutDialog < Wx::Dialog
      Wx::HyperlinkCtrl.new(self, :url => "http://github.com/basvd/syme/", :label => "http://github.com/basvd/syme/", :style => Wx::HL_ALIGN_LEFT | Wx::HL_CONTEXTMENU | Wx::NO_BORDER)],
     [Wx::StaticText.new(self, :label => "License:", :style => Wx::ALIGN_RIGHT),
      Wx::StaticText.new(self,
-:label =>
+     :label =>
 "This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or

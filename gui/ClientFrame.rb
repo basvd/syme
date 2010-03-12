@@ -77,6 +77,7 @@ class ClientFrame < Wx::Frame
     @split_window.min_size = @split_window.best_size
 
     # Events
+    evt_close :on_close
     evt_tree_sel_changed(@window_list, :on_chat_change)
 
     # Fit the frame
@@ -90,6 +91,11 @@ class ClientFrame < Wx::Frame
     new_chat = @window_list.get_item_data(event.get_item())
 
     @chat_window.current_chat = new_chat
+  end
+
+  def on_close(event)
+    destroy()
+    exit()
   end
 
   def update(subject = nil, change = {})

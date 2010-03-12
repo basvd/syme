@@ -1,3 +1,5 @@
+require "wx"
+
 class LogoPanel < Wx::Panel
 
   attr_accessor :logo
@@ -9,7 +11,7 @@ class LogoPanel < Wx::Panel
       @text = Wx::StaticText.new(self, :label => "Syme IRC client")
       evt_size :on_paint_text
     else
-      logo_file = File.join("theme/", "syme-logo.png")
+      logo_file = File.join(BASE_PATH, "theme", "syme-logo.png")
       @logo = Wx::Image.new(logo_file)
       evt_paint :on_paint_image
     end
