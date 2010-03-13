@@ -84,8 +84,11 @@ class ChatWindow < Wx::SplitterWindow
 
     # Update topic_text + observer
     @current_chat.delete_observer(@topic_text) unless @current_chat.nil?
-    topic = chat.topic if chat.respond_to? :topic
-    @topic_text.value = chat.topic unless topic.nil?
+    if chat.respond_to? :topic
+      @topic_text.value = chat.topic unless chat.topic.nil?
+    else
+      @topic_text.value = chat.name unless chat.name.nil?
+    end
     chat.add_observer(@topic_text)
 
     # Update users_list + observer

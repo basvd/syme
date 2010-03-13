@@ -22,17 +22,6 @@ module SymeLib
 
   SYM_REPLIES = NUM_REPLIES.invert()
 
-  # Dynamic event class
-  class IrcEvent
-    def initialize(data)
-      data.each do |k,v|
-        k = k.to_s
-        instance_variable_set("@#{k}", v)
-        self.class.send(:define_method, k, proc { instance_variable_get("@#{k}") })
-      end
-    end
-  end
-
   class Irc < EventMachine::Connection
     include EventMachine::Protocols::LineText2
 
@@ -190,10 +179,14 @@ module SymeLib
     end
   end
 
+  class IrcEvent < Struct.new :channel, :command, :content, :ctcp, :nick, :params,
+  :raw, :source, :source_nick, :source_user, :target, :type
+  end
+
   class MessageParser
-    attr_reader :command, :content, :ctcp, :params, :raw, :source, :target
 
     def initialize(raw)
+
       @raw = raw
 
       # Incoming reply
@@ -238,24 +231,23 @@ module SymeLib
     end
 
     def to_event()
-      data = {
-        :raw => @raw,
-        :command => @command,
-        :source => @source,
-        :type => @type
-      }
+      data = IrcEvent.new
+
+      data.raw = @raw
+      data.command = @command
+      data.type = @type
 
       user = @source.split("!", 2)
-      data[:source_nick], data[:source_user] = user unless user.length != 2
+      data.source_nick, data.source_user = user unless user.length != 2
 
-      data[:content] = @params.last if has_trailing?
-      data[:params] = @params unless @params.nil? || @params.empty?
-      data[:ctcp] = @ctcp unless @ctcp.nil?
+      data.content = @params.last if has_trailing?
+      data.params = @params unless @params.nil? || @params.empty?
+      data.ctcp = @ctcp unless @ctcp.nil?
 
       # data[target_type, target]
-      data[@target[0]] = @target[1] unless target.nil?
+      data[@target[0]] = @target[1] unless @target.nil?
 
-      return IrcEvent.new(data)
+      return data
     end
 
     # Contains a trailing parameter?

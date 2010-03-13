@@ -42,6 +42,17 @@ class ConnectionController
       user.user = @conn.user unless @conn.user.nil?
     end
 
+    # MOTD
+    @conn.on :motd_start, :motd, :motd_end do |event|
+      frontend.invoke_later do
+          @model.users["*"]
+          source = @model.users["*"]
+
+          msg = Message.new(source, event.target, event.content, event.type)
+          @model.chat.add_message(msg)
+        end
+    end
+
     # Channel
     @conn.on :join do |event|
       if(event.source_nick == user.nick)

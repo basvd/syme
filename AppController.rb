@@ -15,7 +15,7 @@ class AppController
 
   def initialize
     # Prepare logger for connection
-    @logger = Logger.new("app.log")
+    @logger = Logger.new(STDOUT)
     @logger.level = Logger::INFO
 
     @conn_list = ConnectionList.new
@@ -63,5 +63,18 @@ class AppController
       end
     end
     connect_dialog.destroy()
+  end
+
+  def on_close(event)
+    close_dialog = Wx::MessageDialog.new(@frame,
+                                         :message => "Do you want to close Syme?",
+                                         :caption => "Quit Syme",
+                                         :style => Wx::YES | Wx::NO)
+    if close_dialog.show_modal() == Wx::ID_YES
+      @frame.destroy()
+      exit()
+    else
+      event.veto()
+    end
   end
 end
