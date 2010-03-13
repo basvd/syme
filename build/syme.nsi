@@ -7,7 +7,7 @@
 # Basic information
 !define AUTHOR    "Bas van Doren"
 !define APP     "Syme"
-!define LONGAPP   "${APP}"  # long application name (used in descriptions)
+!define LONGAPP   "Syme IRC client"  # long application name (used in descriptions)
 !define DESCRIPTION "An IRC client that speaks Ruby."
 !define VER     "0.1.0.0" # using first two numbers
 
@@ -71,19 +71,10 @@ VIAddVersionKey /LANG=${LANG_ENGLISH} "OriginalFilename" "${PNAME}.exe"
 
 # Main section
 Section "Main"
-  Call InitVars
-  Call Init
-  Call RunApp
-SectionEnd
 
-# Assign variable values
-Function InitVars
+  # Variables
   StrCpy "$APP_DIR" "$EXEDIR\app"
-FunctionEnd
-
-# Initialize environment
-Function Init
-
+  
   # Check whether EXE exists
   IfFileExists "$APP_DIR\${EXE}" FoundEXE
     # Program executable not where expected
@@ -115,22 +106,16 @@ Function Init
     System::Call 'Kernel32::SetEnvironmentVariableA(t, t) i("GEM_PATH", "$ENV_VAL").r0'
   !endif
   
-  InitEnd:
-FunctionEnd
-
-# Run application
-Function RunApp
-  ${GetParameters} "$R0" # obtain commandline parameters
+  # Commandline parameters
+  ${GetParameters} "$R0"
   !ifdef EXEPARMS
     StrCmp "$R0" "" 0 +2
       StrCpy "$R0" "${EXEPARMS}"
   !endif
-  #SetOutPath "$EXEDIR" # current working dir
 
   # Start program
-  ExecWait '"$APP_DIR\${EXE}" $R0' # run program
-  RunAppEnd:
-FunctionEnd
+  Exec '"$APP_DIR\${EXE}" $R0' # run program
+SectionEnd
 
 # Assigns resolved paths to ENV_VAL for use as environment variable
 Function EnvPaths 
