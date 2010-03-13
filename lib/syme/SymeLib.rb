@@ -1,9 +1,7 @@
 require "eventmachine"
 require "logger"
 
-# TODO: (list)
-# * Output buffering to avoid flooding
-# * Hashes as a robust alternative to events
+# TODO: Output buffering to avoid flooding
 module SymeLib
   # Default CTCP VERSION reply
   VERSION = "SymeLib 0.1"
@@ -77,7 +75,6 @@ module SymeLib
 
       on :pong do |event|
         @lag = Time.now.to_f - @ping_time
-        @log.info("Ping (s): #{@lag}")
       end
 
       on :motd_end do |event|

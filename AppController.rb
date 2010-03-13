@@ -16,11 +16,11 @@ class AppController
   def initialize
     # Prepare logger for connection
     @logger = Logger.new(STDOUT)
-    @logger.level = Logger::INFO
+    @logger.level = Logger::ERROR
 
     @conn_list = ConnectionList.new
 
-    @frame = ClientFrame.new
+    @frame = ClientFrame.new(self)
     @frontend_queue = ActorQueue.new
     @network_queue = ActorQueue.new
 
@@ -65,6 +65,12 @@ class AppController
     connect_dialog.destroy()
   end
 
+  # Input received from chat window
+  def on_chat_command(event)
+    control = event.event_object
+  end
+
+  # Application is being closed
   def on_close(event)
     close_dialog = Wx::MessageDialog.new(@frame,
                                          :message => "Do you want to close Syme?",
