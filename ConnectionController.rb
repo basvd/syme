@@ -11,18 +11,13 @@ class ConnectionController
 
   ERROR_CODES = (400..599).map { |i| i.to_s }
 
+  attr_reader :model
+
   # Runs in network thread!
   def initialize(user, server, port = 6667, pass = nil)
     @app = AppController.instance
-    frontend = @app.frontend_queue
-
     @logger = @app.logger
-
-    @model = Connection.new(server, user)
-
-    frontend.invoke_later do
-      @app.conn_list.add_connection(@model)
-    end
+    frontend = @app.frontend_queue
 
     @logger.info("Connecting...")
     @conn = EventMachine::connect(server, port, SymeLib::Irc,
@@ -31,6 +26,11 @@ class ConnectionController
                                   :channels => "##groept",
                                   :logger => @logger,
                                   :version => "Syme IRC 0.1dev")
+
+    frontend.invoke_later do
+      @model = Connection.new(self, server, user)
+      @app.conn_list.add_connection(@model)
+    end
 
     # All errors
     @conn.on ERROR_CODES do |event|
@@ -57,9 +57,7 @@ class ConnectionController
     @conn.on :join do |event|
       if(event.source_nick == user.nick)
         frontend.invoke_later do
-          chat = Channel.new(event.channel)
-          @model.add_channel(chat)
-
+          @model.add_channel(event.channel)
           @logger.info("Joined #{event.channel}")
         end
       else
@@ -69,7 +67,6 @@ class ConnectionController
             u = User.new(event.source_nick, event.source_user)
             chat.add_user(u)
           end
-
           @logger.info("#{u.nick} joined #{event.channel}")
         end
       end
@@ -122,5 +119,13 @@ class ConnectionController
         end
       end
     end
+  end
+
+  def say(msg)
+    @conn.say(msg.target, msg.content)# if @model.channels.has_key? msg.target
+  end
+
+  def quit()
+    @conn.quit()
   end
 end

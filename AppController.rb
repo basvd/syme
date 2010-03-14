@@ -28,7 +28,7 @@ class AppController
     @conn_list.add_observer(@frame)
 
     # EventMachine thread (network)
-    Thread.new do
+    @net = Thread.new do
       EventMachine::run do
         # Process actors on every tick
         on_tick = proc do
@@ -41,7 +41,7 @@ class AppController
 
     # Run other thread and process actors (frontend)
     Wx::Timer.every(25) do
-      Thread.pass
+      Thread.pass()
       @frontend_queue.process
     end
 
@@ -68,6 +68,12 @@ class AppController
   # Input received from chat window
   def on_chat_command(event)
     control = event.event_object
+    c = @frame.current_chat
+    if c.is_a? Channel
+      msg = Message.new(c.profile, c.name, control.value)
+      c.conn.say(msg)
+      c.add_message(msg)
+    end
   end
 
   # Application is being closed
@@ -77,6 +83,12 @@ class AppController
                                          :caption => "Quit Syme",
                                          :style => Wx::YES | Wx::NO)
     if close_dialog.show_modal() == Wx::ID_YES
+      @network_queue.invoke_later do
+        @conn_list.connections.each do |c|
+          c.con.quit()
+        end
+      end
+      @net.join()
       @frame.destroy()
       exit()
     else

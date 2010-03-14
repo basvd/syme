@@ -167,6 +167,9 @@ class ClientFrame < Wx::Frame
       @app.on_close(event)
     end
     evt_tree_sel_changed @window_list, :on_chat_change
+    @window_list.evt_set_focus do |event|
+      @message_box.set_focus()
+    end
   end
 
   def on_chat_change(event)
@@ -185,6 +188,7 @@ class ClientFrame < Wx::Frame
         @topic_text.value = new_chat.name unless new_chat.name.nil?
       end
       new_chat.add_observer(@topic_text)
+      @current_chat = new_chat
 
       # Update users_list + observer
       # TODO: Update observable for users_list
@@ -210,13 +214,9 @@ class ClientFrame < Wx::Frame
       @chat_box = ctrl
 
       @chat_panel.layout()
+      @message_box.set_focus()
       thaw()
     end
-  end
-
-  def on_close(event)
-    destroy()
-    exit()
   end
 
   def update(subject = nil, change = {})

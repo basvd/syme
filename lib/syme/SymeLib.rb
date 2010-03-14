@@ -121,6 +121,10 @@ module SymeLib
       send_raw("JOIN #{c}")
     end
 
+    def quit()
+      send_raw("QUIT :Unjoin")
+    end
+
     def say(c, msg)
       send_privmsg(c, msg)
     end

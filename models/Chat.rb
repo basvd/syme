@@ -4,9 +4,10 @@ class Chat
 
   include Observable
 
-  attr_reader :messages, :name
+  attr_reader :conn, :messages, :name
 
-  def initialize(name)
+  def initialize(conn, name)
+    @conn = conn
     @name = name
     @messages = []
   end
@@ -16,5 +17,9 @@ class Chat
 
     changed()
     notify_observers(self, { :messages => msg })
+  end
+
+  def profile
+    return @conn.model.profile
   end
 end

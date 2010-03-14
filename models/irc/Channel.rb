@@ -7,8 +7,8 @@ class Channel < Chat
 
   attr_reader :topic, :users
 
-  def initialize(name)
-    super(name)
+  def initialize(conn, name)
+    super(conn, name)
     @users = []
   end
 

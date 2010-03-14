@@ -4,15 +4,15 @@ class Connection
 
   include Observable
 
-  attr_reader :channels, :chat, :privates, :users
+  attr_reader :channels, :chat, :con, :host, :privates, :profile, :users
 
-  def initialize(sv_name, id)
-    super()
-    @server_name = sv_name
-    @identity = id
+  def initialize(con, server, id)
+    @con = con
+    @host = server
+    @profile = id
 
     # Chat for connection messages
-    @chat = Chat.new(@server_name)
+    @chat = Chat.new(@con, @host)
 
     # Active chats
     @channels = {}
@@ -25,10 +25,10 @@ class Connection
   end
 
   def add_channel(chat)
-    @channels[chat.name] = chat
+    c = @channels[chat] = Channel.new(@con, chat)
 
     changed()
-    notify_observers(self, { :add_channel => chat })
+    notify_observers(self, { :add_channel => c })
   end
 
   def add_private(chat)
