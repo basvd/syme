@@ -53,5 +53,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.",
     dialog_sz.add(button_sz, 0, Wx::ALL | Wx::EXPAND, 5)
 
     set_sizer_and_fit(dialog_sz)
+    centre_on_parent()
   end
 end

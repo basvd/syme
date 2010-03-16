@@ -1,2 +1,5 @@
 *.kpf
 .ignore
+build/*.zip
+build/*.exe
+build/app

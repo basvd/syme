@@ -39,6 +39,7 @@ module SymeLib
 
       @nick = nick
       @pass = args[:pass]
+      @u_name = args[:user] || "syme"
       @version = args[:version] || VERSION
 
       @callbacks = {}
@@ -96,7 +97,7 @@ module SymeLib
       end
 
       send_raw("NICK #{@nick}")
-      send_raw("USER syme 0 * :Syme IRC")
+      send_raw("USER #{@u_name} 0 * :Syme IRC")
 
       trigger(:connect)
     end

@@ -14,21 +14,26 @@ class ConnectionController
   attr_reader :model
 
   # Runs in network thread!
-  def initialize(user, server, port = 6667, pass = nil)
+  def initialize(user, host, port = 6667, args = {})
+
+    name = args[:name] || host
+    chans = args[:channels] || []
+
+
     @app = AppController.instance
     @logger = @app.logger
     frontend = @app.frontend_queue
 
     @logger.info("Connecting...")
-    @conn = EventMachine::connect(server, port, SymeLib::Irc,
+    @conn = EventMachine::connect(host, port, SymeLib::Irc,
                                   user.nick,
-                                  #:channels => ["#groept", "##groept"],
-                                  :channels => "##groept",
+                                  :channels => chans,
                                   :logger => @logger,
+                                  :user => user.user,
                                   :version => "Syme IRC 0.1dev")
 
     frontend.invoke_later do
-      @model = Connection.new(self, server, user)
+      @model = Connection.new(self, host, user)
       @app.conn_list.add_connection(@model)
     end
 

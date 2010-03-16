@@ -5,6 +5,7 @@ require "wx"
 require "ActorQueue"
 require "ConnectionController"
 require "gui/ClientFrame"
+require "gui/dialogs/ConnectDialog"
 require "models/ConnectionList"
 require "models/irc/User"
 
@@ -47,22 +48,22 @@ class AppController
 
     @frame.show()
 
-    # Test
-    nick = "syme-irc"
-    server = "irc.freenode.net"
-    connect_dialog = Wx::TextEntryDialog.new(@frame,
-                                             :message => "Enter a connection string (nick@server) for Syme to connect to:",
-                                             :caption => "Connection test",
-                                             :default_value => "#{nick}@#{server}")
-    if Wx::ID_OK == connect_dialog.show_modal()
-      if(connect_dialog.get_value() =~ /([^@]+)@([^:]+)/)
-        nick, server= $1, $2
-      end
+    # Present connection dialog
+    conn_dlg = ConnectDialog.new(@frame)
+    if Wx::ID_OK == conn_dlg.show_modal()
+      name = conn_dlg.name
+      host, port = conn_dlg.host, conn_dlg.port
+      nick, user = conn_dlg.nick, conn_dlg.user
+      channels = conn_dlg.channels
+
       @network_queue.invoke_later do
-        ConnectionController.new(User.new(nick), server)
+        ConnectionController.new(User.new(nick, user),
+                                 host, port,
+                                 :name => name,
+                                 :channels => channels)
       end
     end
-    connect_dialog.destroy()
+    conn_dlg.destroy()
   end
 
   # Input received from chat window
@@ -81,14 +82,15 @@ class AppController
     close_dialog = Wx::MessageDialog.new(@frame,
                                          :message => "Do you want to close Syme?",
                                          :caption => "Quit Syme",
-                                         :style => Wx::YES | Wx::NO)
+                                         :style => Wx::YES | Wx::NO | Wx::NO_DEFAULT)
     if close_dialog.show_modal() == Wx::ID_YES
       @network_queue.invoke_later do
         @conn_list.connections.each do |c|
           c.con.quit()
         end
+        EventMachine::stop_event_loop()
       end
-      @net.join()
+      @net.join() # Wait for network thread to finish
       @frame.destroy()
       exit()
     else
