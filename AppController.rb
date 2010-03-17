@@ -17,7 +17,7 @@ class AppController
   def initialize
     # Prepare logger for connection
     @logger = Logger.new(STDOUT)
-    @logger.level = Logger::ERROR
+    @logger.level = Logger::DEBUG
 
     @conn_list = ConnectionList.new
 
@@ -77,7 +77,7 @@ class AppController
     end
   end
 
-  # Application is being closed
+  # Main window is being closed
   def on_close(event)
     close_dialog = Wx::MessageDialog.new(@frame,
                                          :message => "Do you want to close Syme?",
@@ -90,11 +90,15 @@ class AppController
         end
         EventMachine::stop_event_loop()
       end
-      @net.join() # Wait for network thread to finish
       @frame.destroy()
-      exit()
     else
       event.veto()
     end
+  end
+
+  # Application is exiting
+  def on_exit
+    @net.join() if @net.alive?
+    exit()
   end
 end

@@ -79,13 +79,21 @@ class ConnectionController
 
     # Users
     @conn.on :names_reply do |event|
-
+      frontend.invoke_later do
+        @logger.debug("Names: #{event.names}")
+        chat = @model.channels[event.channel]
+        unless chat.nil?
+          event.names.each do |name, status|
+            u = User.new(name)
+            chat.add_user(u)
+          end
+        end
+      end
     end
 
     # Nick change
     @conn.on :nick do |event|
       frontend.invoke_later do
-        @model.users[event.source_user]
         source = @model.users[event.source_user]
         source.nick = event.content
       end
@@ -93,11 +101,8 @@ class ConnectionController
 
     # Topic
     @conn.on :topic_is, :no_topic do |event|
-      channel = event.params[1]
-      topic = event.content
       frontend.invoke_later do
-        @model.channels[channel]
-        @model.channels[channel].topic = topic
+        @model.channels[event.channel].topic = event.topic
       end
     end
 
@@ -105,7 +110,7 @@ class ConnectionController
     @conn.on :privmsg do |event|
 
       #target = @model.users[event.target] unless event.target.nil?
-      if(!event.channel.nil?)
+      if event.respond_to? :channel
         # Channel message
         frontend.invoke_later do
           @model.users[event.source_user]

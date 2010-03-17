@@ -56,7 +56,7 @@ module SymeLib
       on :ctcp do |event|
         # TODO: Better CTCP
         @log.info("Received CTCP #{event.content}")
-        if(event.ctcp == "VERSION")
+        if(event.content == "VERSION")
           reply_ctcp(event.source_nick || event.source, "VERSION #{@version}")
         end
       end
@@ -115,7 +115,6 @@ module SymeLib
     # Called on disconnect or connection failure
     def unbind
       @log.info("Disconnected!")
-      EventMachine::stop_event_loop
     end
 
     def join(c)
@@ -169,10 +168,6 @@ module SymeLib
 
     private
     def trigger(event, data = nil)
-      # If necessary, translate numeric or string event to symbol
-      #event = SYM_REPLIES[event] if SYM_REPLIES.has_key?(event)
-      #event = event.intern if event.respond_to?(:intern)
-
       @callbacks[event] = [] unless @callbacks[event].respond_to?(:each)
 
       @callbacks[event].each do |action|
@@ -181,44 +176,29 @@ module SymeLib
     end
   end
 
-  class IrcEvent < Struct.new :channel, :command, :content, :ctcp, :nick, :params,
-  :raw, :source, :source_nick, :source_user, :target, :type
-  end
-
   class MessageParser
 
-    def initialize(raw)
+    @@events = {} # Event classes
 
+    attr_reader :raw, :type
+
+    def initialize(raw)
       @raw = raw
 
-      # Incoming reply
       if(@raw =~ /^:([^\s]+) ([A-Z]+|\d{3})( .*)$/)
+        # Incoming
         @source = $1
         @command = $2
         params = $3
-
-      # Outgoing command
       elsif(@raw =~ /^([A-Z]+)( .*)$/)
+        # Outgoing
         @source = nil # Actually client is source
         @command = $1
         params = $2
-
       else
-        # TODO: fail...
+        # TODO: Throw exception
         return
       end
-
-      # Split parameters (<param> {SPACE <param>} [ SPACE : <trailing>])
-      params = params.split(" :", 2)
-      params[0] = params[0].strip.split(/ +/) if params.size > 1
-      @params = params.flatten()
-
-      # [:channel/:nick, name]
-      @target = parse_target() if has_target?
-
-      @ctcp = parse_ctcp() if is_ctcp?
-
-      @content = @params.last if has_trailing?
 
       # Find the appropriate event type
       if @command.to_i == 0
@@ -229,63 +209,90 @@ module SymeLib
         @type = SYM_REPLIES[@command] if SYM_REPLIES.has_key?(@command)
       end
 
-      @type = :ctcp if @type == :privmsg && is_ctcp?
+      # Split parameters (<param> {SPACE <param>} [ SPACE : <trailing>])
+      params = params.split(" :", 2)
+      params[0] = params[0].strip.split(/ +/) if params.size > 1
+      @params = params.flatten()
+      @data = {}
+
+      #@type = :ctcp if @type == :privmsg && is_ctcp?
+
+      # Parse source if present
+      unless @source.nil?
+        user = @source.split("!", 2)
+        @data[:source_nick], @data[:source_user] = user unless user.length != 2
+        @data[:source] = @source
+      end
+
+      # Interpret @params list, store results in @data
+      case @type
+      when :join
+        parse :channel
+
+      when :topic_is, :no_topic
+        parse :target, :channel, :topic
+
+      when :privmsg, :notice, :motd_start, :motd, :motd_end
+        parse :target, :content
+
+      when :names_reply
+        parse :target, :channel_type, :channel, :names
+
+      end
     end
 
     def to_event()
-      data = IrcEvent.new
-
-      data.raw = @raw
-      data.command = @command
-      data.type = @type
-
-      user = @source.split("!", 2)
-      data.source_nick, data.source_user = user unless user.length != 2
-
-      data.content = @params.last if has_trailing?
-      data.params = @params unless @params.nil? || @params.empty?
-      data.ctcp = @ctcp unless @ctcp.nil?
-
-      # data[target_type, target]
-      data[@target[0]] = @target[1] unless @target.nil?
-
-      return data
-    end
-
-    # Contains a trailing parameter?
-    def has_trailing?
-      return @raw.include?(" :")
-    end
-
-    # Contains a target parameter?
-    def has_target?
-      case @command
-      when /\d{3}/, "JOIN", "PRIVMSG", "NOTICE"
-        return true
-      else
-        return false
-      end
-    end
-
-    def is_ctcp?
-      return true if @params.last =~ /\001(.*)\001/
-      return false
+      # Probably not *that* efficient for caching
+      #event = (@@events[@data.keys] ||  @@events[@data.keys] = Struct.new(:raw, :command, :type, *@data.keys))
+      event = Struct.new(:raw, :command, :type, *@data.keys)
+      return event.new(@raw, @command, @type, *@data.values || [])
     end
 
     private
-    # Parses the first parameter as target
-    def parse_target
-      if(@command == "JOIN")
-        return :channel, @params.last
-      end
-      name = @params[0] # Target is always first parameter (if present)
-      if(name =~ /^[\#+&]/)
-        return :channel, name
-      else
-        return :nick, name[/^[^!]+/] # Only return nickname part
+    def parse(*ps)
+      ps.each do |p|
+        str = @params.shift
+        if respond_to? p, true
+          # Custom parsing if possible
+          send(p, str)
+        else
+          @data[p] = str
+        end
       end
     end
 
+    def content(str)
+      if @type == :privmsg && str =~ /\001(.*)\001/
+        # CTCP
+        @type = :ctcp
+        @data[:content] = MessageParser.ctcp_unquote($1)
+      else
+        @data[:content] = str
+      end
+    end
+
+    def target(str)
+      @data[:target] = str
+      if(str =~ /^[\#+&]/)
+        @data[:channel] = str
+      else
+        @data[:target_nick] = str
+      end
+    end
+
+    def names(str)
+      ns = str.split(" ")
+      ns.map! do |n|
+        if n =~ /^([@\+])/
+          [n[1..-1], $1]
+        else
+          [n, nil]
+        end
+      end
+      @data[:names] = ns
+    end
+
+    # Deprecated
     def parse_ctcp
       m = @params.last.match(/\001(.*)\001/)
       return MessageParser.ctcp_unquote(m[1]) unless m.nil?

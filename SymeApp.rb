@@ -13,6 +13,9 @@ class SymeApp < Wx::App
   def on_init
     @app = AppController.instance
   end
+  def on_exit
+    @app.on_exit
+  end
 end
 
 SymeApp.new.main_loop() unless defined? Ocra
