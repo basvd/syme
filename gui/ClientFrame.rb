@@ -12,7 +12,7 @@ class ClientFrame < Wx::Frame
       :title => SYME_NAME + " version " + SYME_VERSION,
       :pos => Wx::DEFAULT_POSITION,
       :size => [600, 400], #Wx::DEFAULT_SIZE,
-      :style => Wx::DEFAULT_FRAME_STYLE
+      :style => Wx::DEFAULT_FRAME_STYLE ^ Wx::WANTS_CHARS
     )
 
     @app = app
@@ -106,10 +106,13 @@ class ClientFrame < Wx::Frame
 
     # Right panel content
     @users_list = Wx::ListCtrl.new(@right_panel)
+    def @users_list.update(subject, change ={})
+
+    end
     users_text = Wx::StaticText.new(@right_panel,
-                                    :label => "Users",
-                                    :style => Wx::ALIGN_CENTER,
-                                    :size => [-1, @topic_text.best_size.height - text_margin])
+                 :label => "Users",
+                 :style => Wx::ALIGN_CENTER,
+                 :size => [-1, @topic_text.best_size.height - text_margin])
 
     # Right panel layout
     right_siz = Wx::BoxSizer.new(Wx::VERTICAL)
@@ -124,11 +127,13 @@ class ClientFrame < Wx::Frame
 
 
     # Left panel content
-    @window_list = Wx::TreeCtrl.new(@left_panel, :style => Wx::TR_HAS_BUTTONS | Wx::TR_DEFAULT_STYLE)
+    @window_list = Wx::TreeCtrl.new(@left_panel,
+                   :style => Wx::TR_HAS_BUTTONS | Wx::TR_DEFAULT_STYLE | Wx::TR_HIDE_ROOT | Wx::TR_NO_LINES)
+    @window_list.add_root("Servers")
     window_text = Wx::StaticText.new(@left_panel,
-                                     :label => "Conversations",
-                                     :style => Wx::ALIGN_CENTER,
-                                     :size => [-1, @topic_text.best_size.height - text_margin])
+                  :label => "Conversations",
+                  :style => Wx::ALIGN_CENTER,
+                  :size => [-1, @topic_text.best_size.height - text_margin])
 
     # Left panel layout
     left_siz = Wx::BoxSizer.new(Wx::VERTICAL)
@@ -159,6 +164,9 @@ class ClientFrame < Wx::Frame
     #maximize(true)
 
     # Events
+    evt_menu sl_item do |event|
+      @app.on_menu_conn(event)
+    end
     evt_text_enter @message_box do |event|
       @app.on_chat_command(event)
       @message_box.value = ""
@@ -182,25 +190,26 @@ class ClientFrame < Wx::Frame
 
       # Update topic_text + observer
       @current_chat.delete_observer(@topic_text) unless @current_chat.nil?
+
       if new_chat.respond_to? :topic
         @topic_text.value = new_chat.topic unless new_chat.topic.nil?
       else
         @topic_text.value = new_chat.name unless new_chat.name.nil?
       end
       new_chat.add_observer(@topic_text)
-      @current_chat = new_chat
 
       # Update users_list + observer
-      # TODO: Update observable for users_list
       if new_chat.respond_to? :users
+        @current_chat.delete_observer(@users_list)
+        new_chat.add_observer(@users_list)
         @chat_window.split_vertically(@chat_panel, @right_panel, @last_sash_pos || -150) unless @chat_window.is_split()
       elsif @chat_window.is_split()
+        @current_chat.delete_observer(@users_list)
         @last_sash_pos = @chat_window.get_sash_position()
         @chat_window.unsplit(@right_panel)
       end
 
-      # Replace chat_window (keep observer)
-
+      # Replace chat_box (keep observer)
       if @chat_box.is_a? LogoPanel
         @topic_text.show()
         @nick_select.show()
@@ -212,6 +221,7 @@ class ClientFrame < Wx::Frame
       @chat_box.show(false)
       ctrl.show(true)
       @chat_box = ctrl
+      @current_chat = new_chat
 
       @chat_panel.layout()
       @message_box.set_focus()
@@ -221,7 +231,7 @@ class ClientFrame < Wx::Frame
 
   def update(subject = nil, change = {})
     # WxRuby update instead of Observer update...
-    return if change[:messages].nil? && subject == nil
+    return if change[:add_message].nil? && subject == nil
 
     if subject.is_a? ConnectionList
       conn = change[:add_connection]
@@ -250,7 +260,7 @@ class ClientFrame < Wx::Frame
 
     # Adding a subchat?
     if parent.nil?
-      list_id = @window_list.add_root(chat.name)
+      list_id = @window_list.append_item(@window_list.root_item, chat.name)
       @window_list.set_item_has_children(list_id, true)
     else
       p_id = 0

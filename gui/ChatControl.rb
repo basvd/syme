@@ -38,14 +38,12 @@ class ChatControl < Wx::StyledTextCtrl
 
   def update(subject = nil, change = {})
     # WxRuby update instead of Observer update...
-    return if change[:messages].nil? && subject.nil?
+    return if change[:add_message].nil? && subject.nil?
 
-    unless change[:messages].nil?
+    unless change[:add_message].nil?
       self.read_only = false # Temporarily disable
-      change[:messages].each do |msg|
-        write_message(msg)
-        line_scroll(0, wrap_count(get_line_count()) + 1)
-      end
+      write_message(change[:add_message])
+      line_scroll(0, wrap_count(get_line_count()) + 1)
       self.read_only = true
     end
   end

@@ -49,12 +49,16 @@ class AppController
     @frame.show()
 
     # Present connection dialog
-    conn_dlg = ConnectDialog.new(@frame)
-    if Wx::ID_OK == conn_dlg.show_modal()
-      name = conn_dlg.name
-      host, port = conn_dlg.host, conn_dlg.port
-      nick, user = conn_dlg.nick, conn_dlg.user
-      channels = conn_dlg.channels
+    @conn_dlg = ConnectDialog.new(@frame)
+    on_menu_conn()
+  end
+
+  def on_menu_conn(event = nil)
+    if Wx::ID_OK == @conn_dlg.show_modal()
+      name = @conn_dlg.name
+      host, port = @conn_dlg.host, @conn_dlg.port
+      nick, user = @conn_dlg.nick, @conn_dlg.user
+      channels = @conn_dlg.channels
 
       @network_queue.invoke_later do
         ConnectionController.new(User.new(nick, user),
@@ -63,7 +67,6 @@ class AppController
                                  :channels => channels)
       end
     end
-    conn_dlg.destroy()
   end
 
   # Input received from chat window
@@ -90,7 +93,8 @@ class AppController
         end
         EventMachine::stop_event_loop()
       end
-      @frame.destroy()
+      @net.join() if @net.alive?
+      event.skip()
     else
       event.veto()
     end
@@ -98,7 +102,7 @@ class AppController
 
   # Application is exiting
   def on_exit
-    @net.join() if @net.alive?
+    # FIXME: Strange behaviour, called twice and disconnects before QUIT message
     exit()
   end
 end

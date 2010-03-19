@@ -29,4 +29,16 @@ task :clean do
   rm_f "build/Syme.exe"
 end
 
-task :default => [:package, :clean]
+task :info do
+  puts "-------------------------------------------------------------------------------"
+  require "SymeApp"
+  puts SYME_NAME
+  puts "Version: #{SYME_VERSION}"
+  puts "-------------------------------------------------------------------------------"
+  puts "Gathering info..."
+  puts "-------------------------------------------------------------------------------"
+  puts "Code:\n#{`.ignore/cloc.exe *.*  Rakefile build lib theme models gui`}"
+
+end
+
+task :default => [:package, :clean, :info]

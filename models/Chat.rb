@@ -12,11 +12,11 @@ class Chat
     @messages = []
   end
 
-  def add_message(*msg)
-    @messages += msg
+  def add_message(msg)
+    @messages.push(msg)
 
     changed()
-    notify_observers(self, { :messages => msg })
+    notify_observers(self, { :add_message => msg })
   end
 
   def profile

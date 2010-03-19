@@ -284,7 +284,13 @@ module SymeLib
       ns = str.split(" ")
       ns.map! do |n|
         if n =~ /^([@\+])/
-          [n[1..-1], $1]
+          case $1
+          when "@"
+            m = :o
+          when "+"
+            m = :v
+          end
+          [n[1..-1], m]
         else
           [n, nil]
         end

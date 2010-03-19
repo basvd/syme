@@ -4,7 +4,8 @@ class ConnectDialog < Wx::Dialog
 
   def initialize(parent)
     super(parent,
-          :title => "Connect to IRC")
+          :title => "Connect to IRC",
+          :style => Wx::DEFAULT_DIALOG_STYLE | Wx::RESIZE_BORDER)
 
     # Preset name
     @name_ctrl = Wx::TextCtrl.new(self, :value=> "New")

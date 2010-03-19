@@ -83,10 +83,17 @@ class ConnectionController
         @logger.debug("Names: #{event.names}")
         chat = @model.channels[event.channel]
         unless chat.nil?
-          event.names.each do |name, status|
-            u = User.new(name)
+          event.names.each do |name, mode|
+            u = @model.users[name] || User.new(name)
             chat.add_user(u)
+            case mode
+            when :o
+              chat.modes.o.push(u)
+            when :v
+              chat.modes.v.push(u)
+            end
           end
+          chat.modes_changed()
         end
       end
     end

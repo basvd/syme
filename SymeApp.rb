@@ -18,4 +18,6 @@ class SymeApp < Wx::App
   end
 end
 
-SymeApp.new.main_loop() unless defined? Ocra
+if __FILE__ == $0
+  SymeApp.new.main_loop() unless defined? Ocra
+end
