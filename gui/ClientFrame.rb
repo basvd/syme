@@ -11,7 +11,7 @@ class ClientFrame < Wx::Frame
       nil,
       :title => SYME_NAME + " version " + SYME_VERSION,
       :pos => Wx::DEFAULT_POSITION,
-      :size => [600, 400], #Wx::DEFAULT_SIZE,
+      :size => [750, 400], #Wx::DEFAULT_SIZE,
       :style => Wx::DEFAULT_FRAME_STYLE ^ Wx::WANTS_CHARS
     )
 
@@ -64,12 +64,6 @@ class ClientFrame < Wx::Frame
     @chat_controls = Hash.new(LogoPanel.new(@chat_panel, false)) # use logo by default
 
     @topic_text = Wx::TextCtrl.new(@chat_panel, :style => Wx::TE_READONLY)
-    def @topic_text.update(subject, change = {})
-      if(!change[:topic].nil?)
-        self.value = change[:topic]
-        self.tool_tip = change[:topic]
-      end
-    end
 
     #expand_topic = Wx::BitmapButton.new(@chat_panel, :bitmap => Wx::Bitmap.new("icons/control_270_small.png", Wx::BITMAP_TYPE_PNG))
 
@@ -105,10 +99,12 @@ class ClientFrame < Wx::Frame
     @chat_panel.set_sizer_and_fit(@chat_siz)
 
     # Right panel content
-    @users_list = Wx::ListCtrl.new(@right_panel)
-    def @users_list.update(subject, change ={})
-
-    end
+    @users_list = Wx::ListCtrl.new(@right_panel, :style => Wx::LC_LIST | Wx::LC_SINGLE_SEL | Wx::LC_SMALL_ICON)
+    users_imgs = Wx::ImageList.new(16, 16, true, 3)
+    users_imgs.add(Wx::Bitmap.new(File.join(BASE_PATH, "theme", "icons", "star_small.png"), Wx::BITMAP_TYPE_PNG))
+    users_imgs.add(Wx::Bitmap.new(File.join(BASE_PATH, "theme", "icons", "star_small_half.png"), Wx::BITMAP_TYPE_PNG))
+    users_imgs.add(Wx::Bitmap.new(File.join(BASE_PATH, "theme", "icons", "star_small_empty.png"), Wx::BITMAP_TYPE_PNG))
+    @users_list.set_image_list(users_imgs, Wx::IMAGE_LIST_SMALL)
     users_text = Wx::StaticText.new(@right_panel,
                  :label => "Users",
                  :style => Wx::ALIGN_CENTER,
@@ -123,8 +119,6 @@ class ClientFrame < Wx::Frame
     @right_panel.min_size = @right_panel.best_size
 
     @message_box.set_focus()
-
-
 
     # Left panel content
     @window_list = Wx::TreeCtrl.new(@left_panel,
@@ -189,22 +183,20 @@ class ClientFrame < Wx::Frame
       freeze()
 
       # Update topic_text + observer
-      @current_chat.delete_observer(@topic_text) unless @current_chat.nil?
+      @current_chat.delete_observer(self) unless @current_chat.nil?
+      new_chat.add_observer(self)
 
       if new_chat.respond_to? :topic
         @topic_text.value = new_chat.topic unless new_chat.topic.nil?
       else
         @topic_text.value = new_chat.name unless new_chat.name.nil?
       end
-      new_chat.add_observer(@topic_text)
 
       # Update users_list + observer
       if new_chat.respond_to? :users
-        @current_chat.delete_observer(@users_list)
-        new_chat.add_observer(@users_list)
+        @users_list.clear_all()
         @chat_window.split_vertically(@chat_panel, @right_panel, @last_sash_pos || -150) unless @chat_window.is_split()
       elsif @chat_window.is_split()
-        @current_chat.delete_observer(@users_list)
         @last_sash_pos = @chat_window.get_sash_position()
         @chat_window.unsplit(@right_panel)
       end
@@ -242,6 +234,55 @@ class ClientFrame < Wx::Frame
     elsif subject.is_a? Connection
       add_chat(change[:add_channel], subject.chat) if change.has_key? :add_channel
       add_chat(change[:add_private], subject.chat) if change.has_key? :add_private
+    elsif subject.is_a? Channel
+      if change.has_key? :add_user
+        u = change[:add_user]
+        list_id = @users_list.insert_item(1, u.nick)
+        @users_list.set_item_data(list_id, u)
+        refresh_users_list(subject.modes)
+
+      elsif change.has_key? :delete_user
+        puts "Deleting #{u}"
+        u = change[:delete_user]
+        list_id = 0
+        @users_list.each do |i|
+          @users_list.delete_item(i) if @users_list.get_item_data(i) == u
+        end
+
+      elsif change.has_key? :modes
+        refresh_users_list(subject.modes)
+
+      elsif change.has_key? :topic
+        @topic_text.value = change[:topic]
+        @topic_text.tool_tip = change[:topic]
+      end
+    end
+  end
+
+  def refresh_users_list(modes)
+    @users_list.each do |i|
+      u = @users_list.get_item_data(i)
+      if modes.o.include? u
+        img = 0
+      elsif modes.v.include? u
+        img = 1
+      else
+        img = 2
+      end
+      @users_list.set_item_image(i, img, img)
+    end
+    @users_list.sort_items do |a, b|
+      a_o, a_v = modes.o.include?(a), modes.v.include?(a)
+      b_o, b_v = modes.o.include?(b), modes.v.include?(b)
+      if (a_o && b_o) || (a_v && b_v) || (!a_o && !a_v && !b_o && !b_v)
+        a.nick <=> b.nick # Users have equal mode
+      elsif a_o || (a_v && !b_o)
+        -1 # User A has higher mode than B
+      elsif b_o || (b_v && !a_o)
+        1 # User B has higher mode than A
+      else
+        0 # Can't decide
+      end
     end
   end
 

@@ -58,7 +58,7 @@ class ConnectionController
         end
     end
 
-    # Channel
+    # Join
     @conn.on :join do |event|
       if(event.source_nick == user.nick)
         frontend.invoke_later do
@@ -67,12 +67,25 @@ class ConnectionController
         end
       else
         frontend.invoke_later do
-          chat = @model.channels[event.channel]
-          unless chat.nil?
-            u = User.new(event.source_nick, event.source_user)
-            chat.add_user(u)
-          end
+          u = @model.users[event.source_nick] || User.new(event.source_nick)
+          u.user = event.source_user if u.user.nil?
+          @model.add_user(u, event.channel)
           @logger.info("#{u.nick} joined #{event.channel}")
+        end
+      end
+    end
+
+    # Part
+    @conn.on :part do |event|
+      if(event.source_nick == user.nick)
+        # Left channel
+        @logger.info("Leaving...")
+      else
+        # Someone else left
+        frontend.invoke_later do
+          u = @model.users[event.source_nick]
+          @model.delete_user(u, event.channel) unless u.nil?
+          @logger.info("#{u.nick} has left #{event.channel}")
         end
       end
     end
@@ -80,18 +93,17 @@ class ConnectionController
     # Users
     @conn.on :names_reply do |event|
       frontend.invoke_later do
-        @logger.debug("Names: #{event.names}")
         chat = @model.channels[event.channel]
         unless chat.nil?
           event.names.each do |name, mode|
             u = @model.users[name] || User.new(name)
-            chat.add_user(u)
             case mode
             when :o
               chat.modes.o.push(u)
             when :v
               chat.modes.v.push(u)
             end
+            @model.add_user(u, event.channel)
           end
           chat.modes_changed()
         end

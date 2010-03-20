@@ -28,6 +28,19 @@ class Channel < Chat
       @users.push(u)
       changed()
       notify_observers(self, { :add_user => u })
+      return true
+    end
+  end
+
+  def delete_user(u)
+    unless @users.delete(u).nil?
+      # Remove associated modes
+      @modes.o.delete(u)
+      @modes.v.delete(u)
+
+      changed()
+      notify_observers(self, { :delete_user => u })
+      return true
     end
   end
 

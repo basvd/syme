@@ -19,9 +19,8 @@ class Connection
     @privates = {}
 
     # User lookup table
-    @users = Hash.new do |hash, key|
-      hash[key] = User.new(nil, key)
-    end
+    @users = {}
+    @u_ref = Hash.new(0)
   end
 
   def add_channel(chat)
@@ -32,16 +31,14 @@ class Connection
   end
 
   def add_private(chat)
-    @privates[chat.name] = chat
+    c = @privates[chat] = Chat.new(@con, chat) # TODO: PrivateChat
 
     changed()
-    notify_observers(self, { :add_private => chat })
+    notify_observers(self, { :add_private => c })
   end
 
   def delete_channel(c)
-    c = @channels.delete(c)
-
-    unless c.nil?
+    unless @channels.delete(c).nil?
       changed()
       notify_observers(self, { :delete_channel => c })
     end
@@ -51,8 +48,18 @@ class Connection
     # TODO
   end
 
-  def add_user(usr, chan = nil)
-    @users[usr.user] = usr
-    @channels[chan].add_user(usr) unless chan.nil?
+  def add_user(u, chan = nil)
+    @users[u.nick] = u unless @users.has_key? u.nick
+    unless chan.nil?
+      @u_ref[u] = @u_ref[u] + 1
+      @channels[chan].add_user(u)
+    end
+  end
+
+  def delete_user(u, chan = nil)
+    if @channels.has_key? chan
+      @u_ref[u] = @u_ref[u] - 1 if @channels[chan].delete_user(u)
+    end
+    @users.delete(u.nick) if chan.nil?# || @u_ref[u] == 0
   end
 end

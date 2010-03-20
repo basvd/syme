@@ -211,7 +211,7 @@ module SymeLib
 
       # Split parameters (<param> {SPACE <param>} [ SPACE : <trailing>])
       params = params.split(" :", 2)
-      params[0] = params[0].strip.split(/ +/) if params.size > 1
+      params[0] = params[0].strip.split(/ +/)
       @params = params.flatten()
       @data = {}
 
@@ -226,7 +226,7 @@ module SymeLib
 
       # Interpret @params list, store results in @data
       case @type
-      when :join
+      when :join, :part
         parse :channel
 
       when :topic_is, :no_topic

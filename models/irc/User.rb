@@ -4,10 +4,14 @@ class User
 
   include Observable
 
-  attr_accessor :nick, :user, :real_name
+  attr_accessor :hostname, :nick, :real_name, :user
 
-  def initialize(nick = nil, user = nil)
+  def initialize(nick)
     @nick = nick
-    @user = user
   end
+
+  #def eql?(other)
+  #  return @nick == other.nick if other.respond_to? :nick
+  #  return @nick == other
+  #end
 end

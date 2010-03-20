@@ -30,14 +30,14 @@ task :clean do
 end
 
 task :info do
-  puts "-------------------------------------------------------------------------------"
+  puts "Gathering info..."
   require "SymeApp"
+  info = `.ignore/cloc.exe *.*  Rakefile build lib theme models gui`
+  puts "-------------------------------------------------------------------------------"
   puts SYME_NAME
   puts "Version: #{SYME_VERSION}"
   puts "-------------------------------------------------------------------------------"
-  puts "Gathering info..."
-  puts "-------------------------------------------------------------------------------"
-  puts "Code:\n#{`.ignore/cloc.exe *.*  Rakefile build lib theme models gui`}"
+  puts info
 
 end
 

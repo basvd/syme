@@ -59,9 +59,11 @@ class AppController
       host, port = @conn_dlg.host, @conn_dlg.port
       nick, user = @conn_dlg.nick, @conn_dlg.user
       channels = @conn_dlg.channels
+      u = User.new(nick)
+      u.user = user
 
       @network_queue.invoke_later do
-        ConnectionController.new(User.new(nick, user),
+        ConnectionController.new(u,
                                  host, port,
                                  :name => name,
                                  :channels => channels)
