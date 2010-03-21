@@ -110,6 +110,24 @@ class ConnectionController
       end
     end
 
+    # Mode change
+    on_frontend :mode do |event|
+      chan = @model.channels[event.channel] if event.respond_to? :channel
+      unless chan.nil?
+        event.modes.each do |mode, set|
+          case mode
+          when :o, :v
+            u = @model.users[event.params[mode]]
+            unless u.nil?
+              m = (mode == :o) ? chan.modes.o : chan.modes.v
+              set ? m.push(u) : m.delete(u)
+            end
+          end
+        end
+        chan.modes_changed()
+      end
+    end
+
     # Nick change
     @conn.on :nick do |event|
       frontend.invoke_later do
@@ -146,6 +164,14 @@ class ConnectionController
           #@model.privates[event.source]
           #@model.privates[event.source].add_message(msg)
         end
+      end
+    end
+  end
+
+  def on_frontend(evt, &blk)
+    @conn.on evt do |event|
+      @app.frontend_queue.invoke_later do
+        blk.call(event)
       end
     end
   end

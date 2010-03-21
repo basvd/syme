@@ -11,7 +11,6 @@ class ClientFrame < Wx::Frame
       nil,
       :title => SYME_NAME + " version " + SYME_VERSION,
       :pos => Wx::DEFAULT_POSITION,
-      :size => [750, 400], #Wx::DEFAULT_SIZE,
       :style => Wx::DEFAULT_FRAME_STYLE ^ Wx::WANTS_CHARS
     )
 
@@ -153,7 +152,7 @@ class ClientFrame < Wx::Frame
     @chat_window.min_size = @chat_window.best_size
 
     # Fit the frame
-    set_min_size([600, 500])
+    set_min_size([750, 500])
     fit()
     #maximize(true)
 
@@ -242,7 +241,6 @@ class ClientFrame < Wx::Frame
         refresh_users_list(subject.modes)
 
       elsif change.has_key? :delete_user
-        puts "Deleting #{u}"
         u = change[:delete_user]
         list_id = 0
         @users_list.each do |i|

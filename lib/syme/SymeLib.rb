@@ -211,7 +211,11 @@ module SymeLib
 
       # Split parameters (<param> {SPACE <param>} [ SPACE : <trailing>])
       params = params.split(" :", 2)
-      params[0] = params[0].strip.split(/ +/)
+      if params[0].empty?
+        params.shift()
+      else
+        params[0] = params[0].lstrip.split(/ +/)
+      end
       @params = params.flatten()
       @data = {}
 
@@ -234,6 +238,9 @@ module SymeLib
 
       when :privmsg, :notice, :motd_start, :motd, :motd_end
         parse :target, :content
+
+      when :mode
+        parse :target, :modes
 
       when :names_reply
         parse :target, :channel_type, :channel, :names
@@ -277,6 +284,28 @@ module SymeLib
         @data[:channel] = str
       else
         @data[:target_nick] = str
+      end
+    end
+
+    def modes(str)
+      @data[:modes] = {}
+      @data[:params] = {}
+      set = nil
+      str.each_char do |c|
+        if c == "+" || c == "-"
+          set = (c == "+")
+        else
+          c = c.intern
+          case c
+          when :O, :o, :v, :b, :e, :I
+            @data[:params][c] = @params.shift
+          when :k, :l
+            if set
+              @data[:params][c] = @params.shift
+            end
+          end
+          @data[:modes][c] = set
+        end
       end
     end
 
