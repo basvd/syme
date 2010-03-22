@@ -62,4 +62,13 @@ class Connection
     end
     @users.delete(u.nick) if chan.nil?# || @u_ref[u] == 0
   end
+
+  def get_user(nick, user = nil)
+    u = @users[nick]
+    if u.nil?
+      u = @users[nick] = User.new(nick)
+    end
+    u.user = user unless user.nil? || !u.user.nil?
+    return u
+  end
 end

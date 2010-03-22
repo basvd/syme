@@ -1,6 +1,7 @@
 desc "Collect dependencies and environment variables"
 task :collect do
-  ruby "build/collector/collect.rb --windows --dll rubyw.exe.manifest --out build/app SymeApp.rb theme/*"
+  # TODO: Recursive dirs
+  ruby "build/collector/collect.rb --windows --dll rubyw.exe.manifest --out build/app SymeApp.rb theme/* theme/*/*"
 end
 
 file "build/app/env.nsh" => :collect

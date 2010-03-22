@@ -131,7 +131,7 @@ class ConnectionController
     # Nick change
     @conn.on :nick do |event|
       frontend.invoke_later do
-        source = @model.users[event.source_user]
+        source = @model.get_user(event.source_nick, event.source_user)
         source.nick = event.content
       end
     end
@@ -151,8 +151,7 @@ class ConnectionController
         # Channel message
         frontend.invoke_later do
           @model.users[event.source_user]
-          source = @model.users[event.source_user]
-          source.nick = event.source_nick if source.nick.nil?
+          source = @model.get_user(event.source_nick, event.source_user)
 
           msg = Message.new(source, event.target, event.content, type = nil)
           @model.channels[event.channel]

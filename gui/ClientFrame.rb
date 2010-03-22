@@ -194,6 +194,11 @@ class ClientFrame < Wx::Frame
       # Update users_list + observer
       if new_chat.respond_to? :users
         @users_list.clear_all()
+        new_chat.users.each do |u|
+          list_id = @users_list.insert_item(1, u.nick)
+          @users_list.set_item_data(list_id, u)
+        end
+        refresh_users_list(new_chat.modes)
         @chat_window.split_vertically(@chat_panel, @right_panel, @last_sash_pos || -150) unless @chat_window.is_split()
       elsif @chat_window.is_split()
         @last_sash_pos = @chat_window.get_sash_position()

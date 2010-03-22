@@ -16,7 +16,7 @@ class AppController
 
   def initialize
     # Prepare logger for connection
-    @logger = Logger.new(STDOUT)
+    @logger = Logger.new(ENV["SYME_DEBUG"] ? STDOUT : nil)
     @logger.level = Logger::DEBUG
 
     @conn_list = ConnectionList.new
