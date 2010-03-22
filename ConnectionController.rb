@@ -147,10 +147,15 @@ class ConnectionController
     end
 
     # Nick change
-    @conn.on :nick do |event|
-      frontend.invoke_later do
-        source = @model.get_user(event.source_nick, event.source_user)
-        source.nick = event.content
+    on_frontend :nick do |event|
+      source = @model.get_user(event.source_nick, event.source_user)
+      @model.rename_user(source.nick, event.target)
+
+      content = "#{event.source_nick} changed nickname to #{event.target}"
+      @logger.info(content)
+      msg = Message.new(@model.get_user("*"), event.target, content, type = :nick)
+      source.channels.each do |c|
+        c.add_message(msg)
       end
     end
 

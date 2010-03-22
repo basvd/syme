@@ -50,17 +50,20 @@ class Connection
 
   def add_user(u, chan = nil)
     @users[u.nick] = u unless @users.has_key? u.nick
-    unless chan.nil?
-      @u_ref[u] = @u_ref[u] + 1
-      @channels[chan].add_user(u)
+    c = @channels[chan]
+    unless c.nil?
+      u.channels.push(c)
+      c.add_user(u)
     end
   end
 
   def delete_user(u, chan = nil)
-    if @channels.has_key? chan
-      @u_ref[u] = @u_ref[u] - 1 if @channels[chan].delete_user(u)
+    c = @channels[chan]
+    unless c.nil?
+      u.channels.delete(c)
+      c.delete_user(u)
     end
-    @users.delete(u.nick) if chan.nil?# || @u_ref[u] == 0
+    @users.delete(u.nick) if chan.nil?  || u.channels.empty?
   end
 
   def get_user(nick, user = nil)
@@ -70,5 +73,12 @@ class Connection
     end
     u.user = user unless user.nil? || !u.user.nil?
     return u
+  end
+
+  def rename_user(old_nick, new_nick)
+    u = get_user(old_nick)
+    delete_user(u)
+    u.nick = new_nick
+    add_user(u)
   end
 end

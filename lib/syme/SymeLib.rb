@@ -245,6 +245,9 @@ module SymeLib
       when :names_reply
         parse :target, :channel_type, :channel, :names
 
+      when :nick
+        parse :target
+
       end
     end
 

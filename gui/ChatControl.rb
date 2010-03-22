@@ -27,6 +27,8 @@ class ChatControl < Wx::StyledTextCtrl
       r, g, b = rand(0x99), rand(0x99), rand(0x99) # TODO: Different colors
       style_set_foreground(id, Wx::Colour.new(r, g, b) || Wx::RED)
     end
+    default_font = Wx::Font.new(9, Wx::FONTFAMILY_MODERN, Wx::FONTSTYLE_NORMAL, Wx::FONTWEIGHT_NORMAL)
+    style_set_font(32, default_font)
   end
 
   def on_size(event)
@@ -55,7 +57,7 @@ class ChatControl < Wx::StyledTextCtrl
     text += "<" unless m.source_nick.nil?
     nick_range = [pos + text.length, m.source_nick.nil? ? 1 : m.source_nick.length]
     text += m.source_nick.nil? ? "#" : "#{m.source_nick}>"
-    text += text.length > 20 ? "\t" : "\t\t"
+    text += text.length > 16 ? "\t" : "\t\t"
     content_range = [pos + text.length, m.content.length]
     text += m.content
     append_text(text)

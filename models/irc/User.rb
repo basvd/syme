@@ -4,9 +4,10 @@ class User
 
   include Observable
 
-  attr_accessor :hostname, :nick, :real_name, :user
+  attr_accessor :channels, :hostname, :nick, :real_name, :user
 
   def initialize(nick)
+    @channels = []
     @nick = nick
   end
 
